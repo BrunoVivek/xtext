@@ -52,7 +52,9 @@ import com.google.inject.Provider;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.Language;
+import com.intellij.openapi.util.SimpleModificationTracker;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.problems.WolfTheProblemSolver;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -61,7 +63,7 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.CachedValue;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
-import com.intellij.psi.util.PsiModificationTracker;
+import com.intellij.util.indexing.FileBasedIndex;
 import com.intellij.util.indexing.FileBasedIndexImpl;
 import com.intellij.util.indexing.IndexingDataKeys;
 
@@ -80,6 +82,8 @@ public abstract class BaseXtextFile extends PsiFileBase {
     
     protected final CachedValue<XtextResource> resourceCache;
     
+    private final SimpleModificationTracker modificationTracker;
+    
 	protected BaseXtextFile(@NotNull FileViewProvider viewProvider, @NotNull Language language) {
         super(viewProvider, language);
         if (language instanceof IXtextLanguage) {
@@ -97,6 +101,7 @@ public abstract class BaseXtextFile extends PsiFileBase {
 			}
         	
         }, false);
+        modificationTracker = new SimpleModificationTracker();
     }
 	
 	public IXtextLanguage getXtextLanguage() {
@@ -125,12 +130,29 @@ public abstract class BaseXtextFile extends PsiFileBase {
 					}
 			        installResourceDescription(resource);
 					return Result.create(resource, new Object[] {
-							PsiModificationTracker.MODIFICATION_COUNT, 
-							BaseXtextFile.this
+							BaseXtextFile.this,
+							modificationTracker
 					});
 				}
     			
     		});
+    	}
+    }
+    
+    @Override
+    public void clearCaches() {
+    	super.clearCaches();
+    }
+    
+    public void invalidate() {
+    	modificationTracker.incModificationCount();
+    	VirtualFile virtualFile = getVirtualFile();
+    	if (virtualFile != null) {
+    		FileBasedIndex fileBasedIndex = FileBasedIndex.getInstance();
+    		WolfTheProblemSolver wolfTheProblemSolver = WolfTheProblemSolver.getInstance(getProject());
+    		
+			fileBasedIndex.requestReindex(virtualFile);
+			wolfTheProblemSolver.queue(virtualFile);
     	}
     }
 	
@@ -171,7 +193,7 @@ public abstract class BaseXtextFile extends PsiFileBase {
 		return astNodes;
 	}
 
-	protected XtextResource createResource() {    	
+	protected XtextResource createResource() {
     	VirtualFile virtualFile = getViewProvider().getVirtualFile();
         if (virtualFile == null) {
             return null;

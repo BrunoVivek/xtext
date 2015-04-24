@@ -7,43 +7,37 @@
  */
 package org.eclipse.xtext.idea.resource.impl;
 
-import java.util.List;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtend.lib.annotations.Accessors;
+import org.eclipse.xtend.lib.annotations.Delegate;
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.psi.impl.BaseXtextFile;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.resource.IReferenceDescription;
 import org.eclipse.xtext.resource.IResourceDescription;
-import org.eclipse.xtext.resource.impl.AbstractResourceDescription;
-import org.eclipse.xtext.xbase.lib.CollectionLiterals;
+import org.eclipse.xtext.resource.IResourceServiceProvider;
+import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.xbase.lib.Pure;
 
 @FinalFieldsConstructor
 @SuppressWarnings("all")
-public class PsiFileBasedResourceDescription extends AbstractResourceDescription implements IResourceDescription {
+public class PsiFileBasedResourceDescription implements IResourceDescription {
   @Accessors
   private final BaseXtextFile xtextFile;
   
-  @Override
-  protected List<IEObjectDescription> computeExportedObjects() {
-    return this.xtextFile.getExportedObjects();
-  }
+  @Delegate
+  private final IResourceDescription resourceDescription;
   
-  @Override
-  public Iterable<QualifiedName> getImportedNames() {
-    return CollectionLiterals.<QualifiedName>emptyList();
-  }
-  
-  @Override
-  public Iterable<IReferenceDescription> getReferenceDescriptions() {
-    return CollectionLiterals.<IReferenceDescription>emptyList();
-  }
-  
-  @Override
-  public URI getURI() {
-    return this.xtextFile.getURI();
+  public PsiFileBasedResourceDescription(final BaseXtextFile xtextFile) {
+    this.xtextFile = xtextFile;
+    final XtextResource resource = xtextFile.getResource();
+    IResourceServiceProvider _resourceServiceProvider = resource.getResourceServiceProvider();
+    final IResourceDescription.Manager manager = _resourceServiceProvider.getResourceDescriptionManager();
+    IResourceDescription _resourceDescription = manager.getResourceDescription(resource);
+    this.resourceDescription = _resourceDescription;
   }
   
   @Override
@@ -51,17 +45,49 @@ public class PsiFileBasedResourceDescription extends AbstractResourceDescription
     Class<? extends PsiFileBasedResourceDescription> _class = this.getClass();
     String _name = _class.getName();
     String _plus = (_name + ":");
-    String _string = this.xtextFile.toString();
-    return (_plus + _string);
+    return (_plus + this.resourceDescription);
   }
   
-  public PsiFileBasedResourceDescription(final BaseXtextFile xtextFile) {
+  public PsiFileBasedResourceDescription(final BaseXtextFile xtextFile, final IResourceDescription resourceDescription) {
     super();
     this.xtextFile = xtextFile;
+    this.resourceDescription = resourceDescription;
   }
   
   @Pure
   public BaseXtextFile getXtextFile() {
     return this.xtextFile;
+  }
+  
+  public Iterable<IEObjectDescription> getExportedObjects() {
+    return this.resourceDescription.getExportedObjects();
+  }
+  
+  public Iterable<QualifiedName> getImportedNames() {
+    return this.resourceDescription.getImportedNames();
+  }
+  
+  public Iterable<IReferenceDescription> getReferenceDescriptions() {
+    return this.resourceDescription.getReferenceDescriptions();
+  }
+  
+  public URI getURI() {
+    return this.resourceDescription.getURI();
+  }
+  
+  public Iterable<IEObjectDescription> getExportedObjects(final EClass type, final QualifiedName name, final boolean ignoreCase) {
+    return this.resourceDescription.getExportedObjects(type, name, ignoreCase);
+  }
+  
+  public Iterable<IEObjectDescription> getExportedObjectsByObject(final EObject object) {
+    return this.resourceDescription.getExportedObjectsByObject(object);
+  }
+  
+  public Iterable<IEObjectDescription> getExportedObjectsByType(final EClass type) {
+    return this.resourceDescription.getExportedObjectsByType(type);
+  }
+  
+  public boolean isEmpty() {
+    return this.resourceDescription.isEmpty();
   }
 }
